@@ -76,18 +76,17 @@ int main() {
     double sc_x = (p_w / a4_w4);
     double sc_y = (p_h / a4_h4);
 
-
     double rem = sc_x - 1;
-    if ( sc_x > 1 ) {
+    if (sc_x > 1) {
         sc_x = 1 - rem;
-    } else if ( sc_x < 1 ) {
+    } else if (sc_x < 1) {
         sc_x = 1 + rem;
     }
 
     rem = sc_y - 1;
-    if ( sc_y > 1 ) {
+    if (sc_y > 1) {
         sc_y = 1 - rem;
-    } else if ( sc_y < 1 ) {
+    } else if (sc_y < 1) {
         sc_y = 1 + rem;
     }
 
@@ -100,15 +99,22 @@ int main() {
         PdfPainter painter;
         painter.SetPage(page);
 
-        // TODO: do some logging here
-        PdfXObject fst_page(input, i, &output, NULL, true);
-
-        int bmax = input.GetPageCount() - i;
-        for (int b = 0; b < bmax; b++) {
+        for (int b = 0; b < inputSize - i && b < 4; b++) {
+            PdfXObject page(input, i + b, &output, NULL, true);
+            switch (b) {
+            case 0:
+                painter.DrawXObject(0, a4_h4, &page, sc_x, sc_y);
+                break;
+            case 1:
+                painter.DrawXObject(a4_w4, a4_h4, &page, sc_x, sc_y);
+                break;
+            case 2:
+                painter.DrawXObject(0, 0, &page, sc_x, sc_y);
+                break;
+            case 3:
+                painter.DrawXObject(a4_w4, 0, &page, sc_x, sc_y);
+            }
         }
-        // draw four to three page
-        painter.DrawXObject(0, 0, &fst_page, sc_x, sc_y);
-
         painter.FinishPage();
     }
 
