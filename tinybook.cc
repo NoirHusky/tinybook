@@ -72,12 +72,24 @@ int main() {
 
     double p_w = input.GetPage(0)->GetPageSize().GetWidth();
     double p_h = input.GetPage(0)->GetPageSize().GetHeight();
-    if ( p_w > a4_w4 ) { // page width is larger than it's alloted quad
 
+    double sc_x = (p_w / a4_w4);
+    double sc_y = (p_h / a4_h4);
+
+
+    double rem = sc_x - 1;
+    if ( sc_x > 1 ) {
+        sc_x = 1 - rem;
+    } else if ( sc_x < 1 ) {
+        sc_x = 1 + rem;
     }
 
-    double sc_x = 1;
-    double sc_y = 1;
+    rem = sc_y - 1;
+    if ( sc_y > 1 ) {
+        sc_y = 1 - rem;
+    } else if ( sc_y < 1 ) {
+        sc_y = 1 + rem;
+    }
 
     for (int i = 0; i < inputSize; i += 4) {
         PdfPage *page =
