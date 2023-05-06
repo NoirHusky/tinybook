@@ -1,9 +1,11 @@
 #include <cstring>
 #include <getopt.h>
-#include <iostream>
 #include <iomanip>
-#include <vector>
+#include <iostream>
+#include <podofo/doc/PdfPainter.h>
+#include <podofo/doc/PdfStreamedDocument.h>
 #include <podofo/podofo.h>
+#include <vector>
 
 using namespace std;
 using namespace PoDoFo;
@@ -31,9 +33,79 @@ std::vector<std::string> split(const std::string &str, char delim) {
     return strings;
 }
 
+std::vector<PdfRect> get_crop_boxes(const char *pszInput) {
+    std::vector<PdfRect> rects;
 
+    std::string sLine;
+    PdfRect curRect;
+    int x, y, w, h;
+    if (sscanf(pszInput, "%i %i %i %i\n", &x, &y, &w, &h) != 4) {
+        printf("Failed to read bounding box's four numbers from '%s'\n",
+               sLine.c_str() + 15);
+        exit(1);
+    }
+    curRect = PdfRect(static_cast<double>(x), static_cast<double>(y),
+                      static_cast<double>(w - x), static_cast<double>(h - y));
+    rects.push_back(curRect);
 
-int main(int argc, char **argv) {
+    return rects;
+}
+
+int main() {
+    PdfError::EnableDebug(false);
+    PdfMemDocument output;
+    PdfMemDocument input;
+
+    try {
+        input.Load("test.pdf");
+    } catch (const PdfError &e) {
+        e.PrintErrorMsg();
+        return e.GetError();
+    }
+    int inputSize = input.GetPageCount();
+    cout << "Your pdf has: " << inputSize << endl;
+
+    double a4_w = 595;
+    double a4_h = 842;
+    double a4_w4 = a4_w / 2;
+    double a4_h4 = a4_h / 2;
+
+    double p_w = input.GetPage(0)->GetPageSize().GetWidth();
+    double p_h = input.GetPage(0)->GetPageSize().GetHeight();
+    if ( p_w > a4_w4 ) { // page width is larger than it's alloted quad
+
+    }
+
+    double sc_x = 1;
+    double sc_y = 1;
+
+    for (int i = 0; i < inputSize; i += 4) {
+        PdfPage *page =
+            output.CreatePage(PdfPage::CreateStandardPageSize(ePdfPageSize_A4));
+        if (!page) {
+            // PODOFO_RAISE_ERROR(PoDoFo::ePdfError_InvalidHandle);
+        }
+        PdfPainter painter;
+        painter.SetPage(page);
+
+        // TODO: do some logging here
+        PdfXObject fst_page(input, i, &output, NULL, true);
+
+        int bmax = input.GetPageCount() - i;
+        for (int b = 0; b < bmax; b++) {
+        }
+        // draw four to three page
+        painter.DrawXObject(0, 0, &fst_page, sc_x, sc_y);
+
+        painter.FinishPage();
+    }
+
+    output.Write("output.pdf");
+
+    return 0;
+}
+
+int main_t(int argc, char **argv) {
 
     int n;
     // char *filename = nullptr;
@@ -41,12 +113,12 @@ int main(int argc, char **argv) {
 
     while (n != -1) {
         switch (n) {
-            case 'p': {
-                auto str = split(string(optarg), '-');
-                startPage = stoi(str[0]);
-                endPage = stoi(str[1]);
-                break;
-            }
+        case 'p': {
+            auto str = split(string(optarg), '-');
+            startPage = stoi(str[0]);
+            endPage = stoi(str[1]);
+            break;
+        }
             // case 'f':
             //     filename = strdup(optarg);
             //     break;
@@ -61,14 +133,45 @@ int main(int argc, char **argv) {
     //     cout << "ERROR: the " << filename << " doesn't exist!\n";
     //     exit(1);
     // }
+    try {
+        PdfMemDocument input;
+        input.Load("test.pdf");
+        PdfPainter painter;
+        PdfFont *pfont = input.CreateFont("Arial");
+        if (!pfont) {
+            PODOFO_RAISE_ERROR(ePdfError_InvalidHandle);
+        }
 
-    PdfMemDocument input;
-    input.Load("test.pdf");
-    for ( int i = 0; i < input.GetPageCount(); i++ ) {
-        PdfPage* pPage = input.GetPage(i);
+        PdfStreamedDocument output("output.pdf");
+
+        for (int i = 0; i < input.GetPageCount(); i++) {
+            PdfPage *iPage = input.GetPage(i);
+            PdfPage *oPage = output.CreatePage(
+                PdfPage::CreateStandardPageSize(ePdfPageSize_A4));
+            if (!oPage) {
+                PODOFO_RAISE_ERROR(ePdfError_InvalidHandle);
+            }
+            // PdfRect crop = {0, 0, 414, 641};
+            // PdfVariant var;
+            // crop.ToVariant(var);
+            // pPage->GetObject()->GetDictionary().AddKey(
+            // PdfName("MediaBox"), var );
+
+            painter.SetPage(oPage);
+            painter.SetFont(pfont);
+            painter.DrawText(20, 20, "hello world");
+            painter.FinishPage();
+        }
+        // input.Write("output.pdf");
+        output.Close();
+    } catch (const PdfError &e) {
+        fprintf(stderr,
+                "Error: An error %i ocurred during croppping pages in the pdf "
+                "file.\n",
+                e.GetError());
+        e.PrintErrorMsg();
+        return e.GetError();
     }
-    input.Write("output.pdf");
-
 
     int pages = endPage - startPage;
     return 0;
